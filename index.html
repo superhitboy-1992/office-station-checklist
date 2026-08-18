@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="公交驻站检查现场登记与表格导出">
+  <meta name="theme-color" content="#1f6f8b">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="驻站登记">
+  <title>驻站检查登记系统</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-inner">
+      <h1>驻站检查登记系统</h1>
+      <p class="subtitle">登记驻站检查记录 · 自动生成《驻站记录表》</p>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button type="button" class="tab-btn active" data-tab="reg">登记记录</button>
+      <button type="button" class="tab-btn" data-tab="catalog">资料库</button>
+      <button type="button" class="tab-btn" data-tab="list">记录查询</button>
+      <button type="button" class="tab-btn" data-tab="export">导出表格</button>
+      <button type="button" class="tab-btn" data-tab="settings">设置</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <!-- ============ 登记 ============ -->
+    <section id="tab-reg" class="tab-panel active">
+      <div class="install-banner" id="install-banner" hidden>
+        <span class="install-text">可将本系统安装到桌面，全屏、离线使用</span>
+        <span class="install-actions">
+          <button type="button" class="btn mini" id="btn-install">安装</button>
+          <button type="button" class="btn mini ghost" id="btn-install-close">暂不</button>
+        </span>
+      </div>
+      <div class="backup-banner" id="backup-banner" hidden>
+        <span class="backup-text" id="backup-text"></span>
+        <span class="backup-actions">
+          <button type="button" class="btn mini" id="btn-backup-now">去备份</button>
+          <button type="button" class="btn mini ghost" id="btn-backup-close">稍后</button>
+        </span>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card"><span class="stat-num" id="stat-today">0</span><span class="stat-label">今日记录</span></div>
+        <div class="stat-card"><span class="stat-num" id="stat-total">0</span><span class="stat-label">全部记录</span></div>
+        <div class="stat-card"><span class="stat-num" id="stat-days">0</span><span class="stat-label">涉及天数</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2 id="form-title">登记新记录</h2>
+          <span class="editing-tag" id="editing-tag" hidden>正在编辑</span>
+        </div>
+        <form id="record-form" autocomplete="off">
+          <div class="form-section">
+            <div class="form-section-head">
+              <h3>本次检查信息</h3>
+              <button type="button" class="btn mini ghost" id="btn-clear-fixed">开始新检查</button>
+            </div>
+            <p class="desc">站点、驻站人、日期为本次检查的固定信息，登记多辆车时保持不变。</p>
+            <div class="form-grid">
+              <div class="field">
+                <label for="f-station">驻站站名 <em>*</em></label>
+                <div class="pick-wrap">
+                  <input type="text" id="f-station" placeholder="如：汽车站" autocomplete="off" autocapitalize="off" spellcheck="false">
+                  <button type="button" class="pick-btn" data-pick="station" aria-label="选择站点">▾</button>
+                </div>
+              </div>
+              <div class="field">
+                <label for="f-checker">驻站人 <em>*</em></label>
+                <div class="pick-wrap">
+                  <input type="text" id="f-checker" placeholder="检查人姓名" autocomplete="off" autocapitalize="off" spellcheck="false">
+                  <button type="button" class="pick-btn" data-pick="checker" aria-label="选择驻站人">▾</button>
+                </div>
+              </div>
+              <div class="field">
+                <label for="f-date">日期 <em>*</em></label>
+                <input type="date" id="f-date">
+              </div>
+            </div>
+          </div>
+          <div class="form-section">
+            <div class="form-section-head">
+              <h3>车辆登记信息</h3>
+            </div>
+            <div class="form-grid">
+              <div class="field">
+                <label for="f-time">过站时间 <em>*</em></label>
+                <input type="time" id="f-time">
+              </div>
+              <div class="field">
+                <label for="f-route">线路 <em>*</em></label>
+                <div class="pick-wrap">
+                  <input type="text" id="f-route" placeholder="如：莲朱专线" autocomplete="off" autocapitalize="off" spellcheck="false">
+                  <button type="button" class="pick-btn" data-pick="route" aria-label="选择线路">▾</button>
+                </div>
+              </div>
+              <div class="field">
+                <label for="f-plate">车号 <em>*</em></label>
+                <div class="pick-wrap">
+                  <input type="text" id="f-plate" placeholder="如：沪A-68392D" autocomplete="off" autocapitalize="off" spellcheck="false">
+                  <button type="button" class="pick-btn" data-pick="plate" aria-label="选择车号">▾</button>
+                </div>
+              </div>
+              <div class="field">
+                <label for="f-boarding">上客人数</label>
+                <div class="stepper">
+                  <button type="button" class="step-btn" id="board-minus" aria-label="减少人数">−</button>
+                  <input type="number" id="f-boarding" min="0" step="1" inputmode="numeric" placeholder="0">
+                  <button type="button" class="step-btn" id="board-plus" aria-label="增加人数">+</button>
+                </div>
+              </div>
+              <div class="field">
+                <label>进出站规范</label>
+                <button type="button" class="tick-btn" id="tick-norm" data-key="norm">留空</button>
+              </div>
+              <div class="field">
+                <label>售票员招呼</label>
+                <button type="button" class="tick-btn" id="tick-call" data-key="call">留空</button>
+              </div>
+              <div class="field field-wide">
+                <label for="f-result">检查情况</label>
+                <input type="text" id="f-result" placeholder="文字描述，可留空" autocomplete="off" autocapitalize="off" spellcheck="false">
+                <div class="chips" id="chips-result">
+                  <button type="button" class="chip" data-v="正常">正常</button>
+                  <button type="button" class="chip" data-v="未按规定进出站">未按规定进出站</button>
+                  <button type="button" class="chip" data-v="未打招呼">未打招呼</button>
+                  <button type="button" class="chip" data-v="其他问题">其他问题</button>
+                </div>
+              </div>
+              <div class="field">
+                <label for="f-rectify">整改措施</label>
+                <input type="text" id="f-rectify" placeholder="如：已当场整改，可留空" autocomplete="off" autocapitalize="off" spellcheck="false">
+              </div>
+              <div class="field">
+                <label for="f-remark">备注</label>
+                <input type="text" id="f-remark" placeholder="其他需要说明的事项，可留空" autocomplete="off" autocapitalize="off" spellcheck="false">
+              </div>
+            </div>
+          </div>
+          <div class="form-actions" id="form-actions">
+            <button type="submit" class="btn primary grow" id="btn-save">保存记录</button>
+            <button type="button" class="btn ghost" id="btn-cancel-edit" hidden>取消编辑</button>
+            <span class="form-hint">保存后自动清空车辆信息，可继续登记下一辆；站点、驻站人、日期为本次检查固定信息，换站时点「开始新检查」。</span>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ============ 资料库 ============ -->
+    <section id="tab-catalog" class="tab-panel">
+      <div class="card">
+        <div class="card-head">
+          <h2>资料库</h2>
+          <span class="desc">站点、驻站人、线路的完整名单，登记时自动参与模糊匹配（支持拼音）。</span>
+        </div>
+        <div class="catalog-grid">
+          <div class="catalog-block" data-cat="stations">
+            <div class="catalog-head">
+              <h3>站点 <span class="catalog-count" id="cat-stations-count">0 条</span></h3>
+              <div class="catalog-actions">
+                <button type="button" class="btn mini" data-act="import" data-cat="stations">导入 Excel</button>
+                <button type="button" class="btn mini danger" data-act="clear" data-cat="stations">清空本类</button>
+              </div>
+            </div>
+            <div class="catalog-tools">
+              <input type="search" id="cat-stations-search" placeholder="搜索站点（支持拼音）…" autocomplete="off" autocapitalize="off">
+              <div class="catalog-add">
+                <input type="text" id="cat-stations-add" placeholder="手动添加站点名" autocomplete="off" autocapitalize="off">
+                <button type="button" class="btn primary mini" data-act="add" data-cat="stations">添加</button>
+              </div>
+            </div>
+            <div class="catalog-list" id="cat-stations-list"></div>
+            <input type="file" id="cat-stations-file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+          </div>
+
+          <div class="catalog-block" data-cat="checkers">
+            <div class="catalog-head">
+              <h3>驻站人 <span class="catalog-count" id="cat-checkers-count">0 条</span></h3>
+              <div class="catalog-actions">
+                <button type="button" class="btn mini" data-act="import" data-cat="checkers">导入 Excel</button>
+                <button type="button" class="btn mini danger" data-act="clear" data-cat="checkers">清空本类</button>
+              </div>
+            </div>
+            <div class="catalog-tools">
+              <input type="search" id="cat-checkers-search" placeholder="搜索驻站人（支持拼音）…" autocomplete="off" autocapitalize="off">
+              <div class="catalog-add">
+                <input type="text" id="cat-checkers-add" placeholder="手动添加姓名" autocomplete="off" autocapitalize="off">
+                <button type="button" class="btn primary mini" data-act="add" data-cat="checkers">添加</button>
+              </div>
+            </div>
+            <div class="catalog-list" id="cat-checkers-list"></div>
+            <input type="file" id="cat-checkers-file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+          </div>
+
+          <div class="catalog-block" data-cat="routes">
+            <div class="catalog-head">
+              <h3>线路 <span class="catalog-count" id="cat-routes-count">0 条</span></h3>
+              <div class="catalog-actions">
+                <button type="button" class="btn mini" data-act="import" data-cat="routes">导入 Excel</button>
+                <button type="button" class="btn mini danger" data-act="clear" data-cat="routes">清空本类</button>
+              </div>
+            </div>
+            <div class="catalog-tools">
+              <input type="search" id="cat-routes-search" placeholder="搜索线路（支持拼音）…" autocomplete="off" autocapitalize="off">
+              <div class="catalog-add">
+                <input type="text" id="cat-routes-add" placeholder="手动添加线路名" autocomplete="off" autocapitalize="off">
+                <button type="button" class="btn primary mini" data-act="add" data-cat="routes">添加</button>
+              </div>
+            </div>
+            <div class="catalog-list" id="cat-routes-list"></div>
+            <input type="file" id="cat-routes-file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 记录查询 ============ -->
+    <section id="tab-list" class="tab-panel">
+      <div class="card">
+        <button type="button" class="filter-toggle" id="btn-filter-toggle">展开筛选</button>
+        <div class="filter-bar" id="filter-bar">
+          <div class="filter-item">
+            <label for="lf-from">日期从</label>
+            <input type="date" id="lf-from">
+          </div>
+          <div class="filter-item">
+            <label for="lf-to">至</label>
+            <input type="date" id="lf-to">
+          </div>
+          <div class="filter-item">
+            <label for="lf-station">站点</label>
+            <input type="text" id="lf-station" placeholder="全部" autocomplete="off">
+          </div>
+          <div class="filter-item">
+            <label for="lf-route">线路</label>
+            <input type="text" id="lf-route" placeholder="全部" autocomplete="off">
+          </div>
+          <div class="filter-item">
+            <label for="lf-keyword">关键字</label>
+            <input type="text" id="lf-keyword" placeholder="车号/检查情况/备注" autocomplete="off">
+          </div>
+          <div class="filter-actions">
+            <button type="button" class="btn primary" id="btn-filter">查询</button>
+            <button type="button" class="btn ghost" id="btn-filter-reset">重置</button>
+          </div>
+        </div>
+        <div class="list-meta">
+          <span id="list-count">共 0 条记录</span>
+        </div>
+        <div class="table-wrap">
+          <table class="record-table">
+            <thead>
+              <tr>
+                <th>日期</th><th>时间</th><th>站点</th><th>线路</th><th>车号</th><th>上客</th>
+                <th>进出站规范</th><th>售票员招呼</th><th>检查情况</th><th>整改措施</th><th>备注</th><th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="record-tbody"></tbody>
+          </table>
+        </div>
+        <div class="record-cards" id="record-cards"></div>
+        <p class="empty-tip" id="list-empty" hidden>没有符合条件的记录</p>
+      </div>
+    </section>
+
+    <!-- ============ 导出 ============ -->
+    <section id="tab-export" class="tab-panel">
+      <div class="card">
+        <div class="filter-bar">
+          <div class="filter-item">
+            <label for="ef-from">日期从</label>
+            <input type="date" id="ef-from">
+          </div>
+          <div class="filter-item">
+            <label for="ef-to">至</label>
+            <input type="date" id="ef-to">
+          </div>
+          <div class="filter-item">
+            <label for="ef-station">站点</label>
+            <input type="text" id="ef-station" placeholder="全部" autocomplete="off">
+          </div>
+          <div class="filter-actions">
+            <button type="button" class="btn primary" id="btn-groups">查询分组</button>
+            <button type="button" class="btn" id="btn-export-all">批量导出 ZIP</button>
+          </div>
+        </div>
+        <div class="list-meta">
+          <span id="group-count">共 0 个分组</span>
+        </div>
+        <div class="table-wrap">
+          <table class="record-table">
+            <thead>
+              <tr>
+                <th>日期</th><th>站点</th><th>驻站人</th><th>记录条数</th><th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="group-tbody"></tbody>
+          </table>
+        </div>
+        <div class="record-cards" id="group-cards"></div>
+        <p class="empty-tip" id="group-empty" hidden>当前条件下没有记录</p>
+        <div class="note-box">
+          说明：按「日期 + 站点」分组，每组自动生成一张《驻站记录表》（固定 30 行、A4 打印格式），
+          与现成模板一致。手机上可直接分享表格到微信/邮件；批量导出会把多张表打包成一个 ZIP 文件。
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 设置 ============ -->
+    <section id="tab-settings" class="tab-panel">
+      <div class="card">
+        <h2>常用选项维护</h2>
+        <p class="desc">站点、驻站人、线路请在「资料库」页维护；此处仅维护常用车号，每行一个，保存后立即生效。</p>
+        <div class="form-grid">
+          <div class="field">
+            <label for="set-plates">常用车号</label>
+            <textarea id="set-plates" rows="5" placeholder="每行一个车号"></textarea>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn primary" id="btn-save-settings">保存选项</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>数据备份</h2>
+        <p class="desc">数据保存在当前浏览器的本地存储中。建议定期备份；换手机或清理浏览器数据前请先备份。</p>
+        <div class="form-actions">
+          <button type="button" class="btn" id="btn-backup">导出数据（JSON）</button>
+          <button type="button" class="btn" id="btn-restore">导入备份</button>
+          <input type="file" id="restore-file" accept=".json,application/json" hidden>
+        </div>
+      </div>
+
+      <div class="card danger-card">
+        <h2>危险操作</h2>
+        <p class="desc">清空后所有登记记录和选项将丢失，且无法恢复。请先备份！</p>
+        <button type="button" class="btn danger" id="btn-clear-all">清空全部数据</button>
+      </div>
+
+      <div class="card">
+        <h2>使用说明</h2>
+        <ul class="help-list">
+          <li>手机使用：先用浏览器打开本系统，选择「添加到主屏幕」后即可像 App 一样全屏、离线使用。</li>
+          <li>登记：填好站点、驻站人、线路、车号等后点「保存记录」，即可继续登记下一辆。</li>
+          <li>资料库：站点、驻站人、线路在「资料库」页维护，支持 Excel 一键导入和手动增删改；录入时支持汉字或拼音模糊匹配。</li>
+          <li>导出：在「导出表格」选择日期范围，按「日期+站点」分组，每组生成一张《驻站记录表》。</li>
+          <li>生成的文件与《驻站记录表.xlsx》格式一致：30 行、A4 纵向打印、可合并到月度汇总。</li>
+          <li>数据只存在这台设备的这个浏览器里，不会上传到任何服务器。</li>
+          <li>建议定期在「设置 → 数据备份」导出 JSON 备份文件。</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ 快捷选择弹层（站点/驻站人/线路/车号） ============ -->
+  <div class="sheet-overlay" id="picker-overlay" hidden>
+    <div class="sheet" id="picker-panel">
+      <div class="sheet-head">
+        <h3 id="picker-title">选择站点</h3>
+        <button type="button" class="sheet-close" id="picker-close" aria-label="关闭">✕</button>
+      </div>
+      <input type="search" id="picker-search" placeholder="输入或搜索…" autocomplete="off" autocapitalize="off" enterkeyhint="done">
+      <div class="picker-list" id="picker-list"></div>
+      <div class="sheet-actions">
+        <button type="button" class="btn ghost" id="picker-clear">清空</button>
+        <button type="button" class="btn primary grow" id="picker-apply">使用输入内容</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 首启安装引导 ============ -->
+  <div class="guide-overlay" id="guide-overlay" hidden>
+    <div class="guide-box">
+      <h2>安装到手机桌面</h2>
+      <p class="guide-intro">建议将本系统「添加到主屏幕」，像 App 一样全屏使用，断网也能登记。</p>
+      <ol class="guide-steps">
+        <li>安卓 Chrome：右上角菜单 →「添加到主屏幕」</li>
+        <li>iPhone Safari：底部分享按钮 →「添加到主屏幕」</li>
+        <li>若在微信中打开，请先点右上角「···」→「在浏览器中打开」</li>
+      </ol>
+      <p class="guide-note">数据保存在本机浏览器中，请定期在「设置 → 数据备份」导出备份。</p>
+      <div class="guide-actions">
+        <button type="button" class="btn primary grow" id="guide-close">知道了</button>
+        <button type="button" class="btn ghost" id="guide-dismiss">不再提示</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-overlay" hidden>
+    <div class="modal">
+      <p class="modal-text" id="modal-text"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn primary" id="modal-ok">确定</button>
+        <button type="button" class="btn ghost" id="modal-cancel">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <script src="js/core.js"></script>
+  <script src="js/catalog-data.js"></script>
+  <script src="js/search.js"></script>
+  <script src="js/xlsx-import.js"></script>
+  <script src="js/template-data.js"></script>
+  <script src="js/xlsx-writer.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
