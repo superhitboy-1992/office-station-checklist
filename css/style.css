@@ -1,11 +1,13 @@
 :root {
-  --primary: #1f6f8b;
-  --primary-dark: #17566d;
-  --bg: #f2f5f7;
-  --card: #ffffff;
-  --text: #22333b;
-  --muted: #6b7a83;
-  --border: #d7e0e5;
+  --primary: #3f7d6f;
+  --primary-dark: #35695d;
+  --primary-light: #d2e7e5;
+  --bg: #eaf3ef;
+  --card: rgba(255, 255, 255, 0.94);
+  --text: #2f3b37;
+  --muted: #74817b;
+  --border: #dde3dd;
+  --glass-border: rgba(255, 255, 255, 0.7);
   --danger: #c0392b;
   --ok: #1e8449;
   --bad: #c0392b;
@@ -28,13 +30,25 @@ body {
   font-size: 14px;
 }
 
+/* 全站固定背景（毛玻璃质感，位于内容之下） */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: url("../assets/bg-desktop.webp");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
 button {
   font-family: inherit;
 }
 
 .app-header {
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  color: #fff;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--text);
   padding: 18px 20px 0;
 }
 
@@ -44,15 +58,32 @@ button {
   padding-bottom: 12px;
 }
 
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-mascot {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(45, 72, 63, 0.18);
+}
+
 .header-inner h1 {
   margin: 0;
   font-size: 22px;
   letter-spacing: 1px;
+  color: var(--primary-dark);
 }
 
 .subtitle {
   margin: 6px 0 0;
-  opacity: 0.85;
+  color: var(--muted);
   font-size: 13px;
 }
 
@@ -66,7 +97,7 @@ button {
 .tab-btn {
   border: none;
   background: transparent;
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(47, 59, 55, 0.75);
   padding: 10px 18px;
   font-size: 14px;
   cursor: pointer;
@@ -76,13 +107,13 @@ button {
 }
 
 .tab-btn:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.12);
+  color: var(--primary-dark);
+  background: rgba(63, 125, 111, 0.1);
 }
 
 .tab-btn.active {
-  background: var(--bg);
-  color: var(--primary);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--primary-dark);
   font-weight: 600;
 }
 
@@ -102,11 +133,11 @@ button {
 
 .card {
   background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
   padding: 18px 20px;
   margin-bottom: 18px;
-  box-shadow: 0 1px 3px rgba(31, 63, 79, 0.06);
+  box-shadow: 0 4px 18px rgba(45, 72, 63, 0.08);
 }
 
 .card h2 {
@@ -145,14 +176,14 @@ button {
 }
 
 .install-banner {
-  background: #e6f1f6;
-  border: 1px solid #c3ddea;
-  color: #1f6f8b;
+  background: #e7f0ec;
+  border: 1px solid #cfe0d8;
+  color: #35695d;
 }
 
 .backup-banner {
-  background: #fdf3e3;
-  border: 1px solid #f0d9b0;
+  background: #faf0dc;
+  border: 1px solid #eeddb6;
   color: #8a5a14;
 }
 
@@ -179,12 +210,13 @@ button {
   flex: 1;
   min-width: 120px;
   background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  box-shadow: 0 2px 10px rgba(45, 72, 63, 0.06);
 }
 
 .stat-num {
@@ -253,7 +285,7 @@ button {
   padding: 9px 11px;
   font-size: 14px;
   font-family: inherit;
-  background: #fbfdfe;
+  background: rgba(255, 255, 255, 0.88);
   color: var(--text);
   width: 100%;
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -268,7 +300,7 @@ button {
 .field textarea:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(31, 111, 139, 0.12);
+  box-shadow: 0 0 0 3px rgba(63, 125, 111, 0.14);
   background: #fff;
 }
 
@@ -285,7 +317,7 @@ button {
 .pick-btn {
   border: 1px solid var(--border);
   border-left: none;
-  background: #eef4f7;
+  background: rgba(237, 241, 234, 0.9);
   color: var(--primary-dark);
   width: 44px;
   font-size: 14px;
@@ -295,7 +327,7 @@ button {
 }
 
 .pick-btn:active {
-  background: #dce9ee;
+  background: #dce6de;
 }
 
 /* 上客人数步进 */
@@ -304,7 +336,7 @@ button {
   border: 1px solid var(--border);
   border-radius: 7px;
   overflow: hidden;
-  background: #fbfdfe;
+  background: rgba(251, 253, 254, 0.9);
 }
 
 .stepper input {
@@ -322,7 +354,7 @@ button {
 
 .step-btn {
   border: none;
-  background: #eef4f7;
+  background: #edf1ea;
   color: var(--primary-dark);
   width: 46px;
   flex: none;
@@ -331,20 +363,24 @@ button {
 }
 
 .step-btn:active {
-  background: #dce9ee;
+  background: #dce6de;
 }
 
 /* √/× 两态按钮 */
 .tick-btn {
   border: 1px solid var(--border);
   border-radius: 9px;
-  background: #fbfdfe;
+  background: rgba(255, 255, 255, 0.9);
   color: var(--muted);
   padding: 12px 14px;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.tick-btn:active {
+  transform: scale(0.97);
 }
 
 .tick-btn.ok {
@@ -368,12 +404,17 @@ button {
 
 .chip {
   border: 1px solid var(--border);
-  background: #fbfdfe;
+  background: rgba(255, 255, 255, 0.9);
   color: var(--muted);
   border-radius: 999px;
   padding: 7px 14px;
   font-size: 13px;
   cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.chip:active {
+  transform: scale(0.96);
 }
 
 .chip.active {
@@ -398,33 +439,47 @@ button {
 
 .btn {
   border: 1px solid var(--border);
-  background: #fff;
+  background: rgba(255, 255, 255, 0.92);
   color: var(--text);
   border-radius: 7px;
   padding: 9px 18px;
   font-size: 14px;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s, box-shadow 0.15s;
 }
 
 .btn:hover {
-  background: #f2f6f8;
+  background: rgba(255, 255, 255, 0.98);
+}
+
+.btn:active {
+  transform: translateY(1px) scale(0.98);
 }
 
 .btn.primary {
   background: var(--primary);
   border-color: var(--primary);
   color: #fff;
+  box-shadow: 0 2px 6px rgba(63, 125, 111, 0.25);
 }
 
 .btn.primary:hover {
   background: var(--primary-dark);
 }
 
+.btn.primary:active {
+  box-shadow: 0 1px 3px rgba(63, 125, 111, 0.2);
+}
+
 .btn.ghost {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.35);
   border-color: var(--border);
   color: var(--muted);
+}
+
+.btn.ghost:hover {
+  background: rgba(63, 125, 111, 0.06);
+  color: var(--primary-dark);
 }
 
 .btn.danger {
@@ -446,7 +501,7 @@ button {
   display: none;
   width: 100%;
   border: 1px dashed var(--border);
-  background: #fbfdfe;
+  background: rgba(255, 255, 255, 0.85);
   color: var(--primary);
   border-radius: 8px;
   padding: 11px;
@@ -480,6 +535,7 @@ button {
   padding: 8px 10px;
   font-size: 13px;
   width: 150px;
+  background: rgba(255, 255, 255, 0.85);
 }
 
 .filter-actions {
@@ -513,7 +569,7 @@ button {
 }
 
 .record-table th {
-  background: #eef4f7;
+  background: rgba(237, 241, 233, 0.85);
   color: var(--primary-dark);
   font-weight: 600;
 }
@@ -525,7 +581,7 @@ button {
 }
 
 .record-table tr:hover td {
-  background: #f7fafb;
+  background: rgba(255, 255, 255, 0.55);
 }
 
 .row-actions {
@@ -570,7 +626,7 @@ button {
 }
 
 .record-card {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.94);
   border: 1px solid var(--border);
   border-radius: 12px;
   margin-bottom: 10px;
@@ -583,7 +639,7 @@ button {
   align-items: center;
   gap: 10px;
   border: none;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.9);
   padding: 13px 14px;
   font-size: 14px;
   color: var(--text);
@@ -592,7 +648,7 @@ button {
 }
 
 .card-main:active {
-  background: #f7fafb;
+  background: rgba(246, 245, 238, 0.9);
 }
 
 .card-time {
@@ -641,7 +697,7 @@ button {
   display: none;
   border-top: 1px dashed var(--border);
   padding: 10px 14px;
-  background: #fbfdfe;
+  background: rgba(255, 255, 255, 0.82);
 }
 
 .record-card.open .card-detail {
@@ -710,17 +766,22 @@ button {
   background: #fdecea;
 }
 
+.empty-state {
+  text-align: center;
+  padding: 18px 0 6px;
+}
+
 .empty-tip {
   color: var(--muted);
   text-align: center;
-  padding: 26px 0;
+  padding: 12px 0 26px;
   margin: 0;
 }
 
 .note-box {
-  background: #eef6f9;
-  border: 1px solid #cfe4ec;
-  color: #3c6474;
+  background: #eef3ea;
+  border: 1px solid #d5e2d4;
+  color: #44624f;
   border-radius: 8px;
   padding: 12px 14px;
   margin-top: 14px;
@@ -749,7 +810,7 @@ button {
 .sheet-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(20, 35, 42, 0.45);
+  background: rgba(45, 60, 55, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -762,7 +823,7 @@ button {
 }
 
 .sheet {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.94);
   border-radius: 16px;
   padding: 18px 20px;
   width: 420px;
@@ -801,7 +862,7 @@ button {
   padding: 12px 14px;
   font-size: 16px;
   font-family: inherit;
-  background: #fbfdfe;
+  background: rgba(255, 255, 255, 0.85);
   color: var(--text);
   width: 100%;
 }
@@ -809,7 +870,7 @@ button {
 .sheet input[type="search"]:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(31, 111, 139, 0.12);
+  box-shadow: 0 0 0 3px rgba(63, 125, 111, 0.14);
   background: #fff;
 }
 
@@ -824,17 +885,17 @@ button {
   display: block;
   width: 100%;
   border: none;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.9);
   text-align: left;
   padding: 13px 6px;
   font-size: 15px;
   color: var(--text);
   cursor: pointer;
-  border-bottom: 1px solid #eef2f4;
+  border-bottom: 1px solid #eef0ea;
 }
 
 .picker-item:active {
-  background: #f2f6f8;
+  background: rgba(244, 245, 239, 0.9);
 }
 
 .picker-empty {
@@ -853,7 +914,7 @@ button {
 .guide-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(20, 35, 42, 0.55);
+  background: rgba(45, 60, 55, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -861,7 +922,7 @@ button {
 }
 
 .guide-box {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.94);
   border-radius: 16px;
   padding: 22px 24px;
   width: 360px;
@@ -905,7 +966,7 @@ button {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(20, 35, 42, 0.45);
+  background: rgba(45, 60, 55, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -917,7 +978,7 @@ button {
 }
 
 .modal {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.94);
   border-radius: 12px;
   padding: 22px 24px;
   width: 360px;
@@ -942,7 +1003,7 @@ button {
   left: 50%;
   bottom: calc(36px + var(--safe-bottom));
   transform: translateX(-50%);
-  background: #22333b;
+  background: #2f3b37;
   color: #fff;
   padding: 10px 20px;
   border-radius: 24px;
@@ -954,6 +1015,117 @@ button {
 
 .toast.error {
   background: var(--danger);
+}
+
+/* ---------- 启动画面 ---------- */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  overflow: hidden;
+  background: #0b1220;
+  transition: opacity 0.45s ease, visibility 0.45s;
+}
+
+.splash::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 38%;
+  background: linear-gradient(to top, rgba(5, 10, 20, 0.72), rgba(5, 10, 20, 0));
+  pointer-events: none;
+}
+
+.splash.hide {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.splash-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 30%;
+  transform-origin: 50% 30%;
+  animation: splash-fade 0.6s ease both, splash-zoom 6s ease-in-out infinite alternate;
+}
+
+.splash-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0 24px 56px;
+  text-align: center;
+}
+
+.splash-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 2px;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.65);
+}
+
+.splash-sub {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+  letter-spacing: 1px;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+}
+
+@keyframes splash-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes splash-zoom {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash {
+    transition: none;
+  }
+
+  .splash-img {
+    animation: none;
+  }
+
+  .btn,
+  .chip,
+  .tick-btn,
+  .tab-btn,
+  .pick-btn,
+  .step-btn {
+    transition: none;
+  }
+
+  .btn:active,
+  .chip:active,
+  .tick-btn:active {
+    transform: none;
+  }
 }
 
 /* ================= 平板 / 窄屏 ================= */
@@ -968,6 +1140,11 @@ button {
 
 /* ================= 手机 ================= */
 @media (max-width: 767px) {
+  body::before {
+    background-image: url("../assets/bg-mobile.webp");
+    background-position: center top;
+  }
+
   .container {
     padding: 14px 12px 110px;
   }
@@ -978,6 +1155,11 @@ button {
 
   .header-inner h1 {
     font-size: 19px;
+  }
+
+  .header-mascot {
+    width: 38px;
+    height: 38px;
   }
 
   .subtitle {
@@ -1054,9 +1236,9 @@ button {
     bottom: 0;
     margin: 0;
     padding: 10px 14px calc(10px + var(--safe-bottom));
-    background: rgba(255, 255, 255, 0.97);
+    background: rgba(255, 255, 255, 0.94);
     border-top: 1px solid var(--border);
-    box-shadow: 0 -3px 12px rgba(31, 63, 79, 0.08);
+    box-shadow: 0 -3px 12px rgba(45, 72, 63, 0.08);
     z-index: 60;
     flex-wrap: nowrap;
   }
@@ -1170,7 +1352,7 @@ button {
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 14px;
-  background: #fff;
+  background: var(--card);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1233,7 +1415,7 @@ button {
   border-radius: 7px;
   max-height: 380px;
   overflow-y: auto;
-  background: #fafcfd;
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .catalog-item {
@@ -1302,7 +1484,7 @@ button {
   left: 0;
   right: 0;
   z-index: 60;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.94);
   border: 1px solid var(--border);
   border-radius: 8px;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
@@ -1329,4 +1511,48 @@ button {
 .suggest-item:hover,
 .suggest-item:active {
   background: #eef4f7;
+}
+
+/* ================= 毛玻璃（支持 backdrop-filter 时启用） ================= */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .app-header {
+    background: rgba(255, 255, 255, 0.5);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+    backdrop-filter: blur(14px) saturate(1.2);
+  }
+
+  .tab-btn.active {
+    background: rgba(255, 255, 255, 0.85);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+
+  .card,
+  .stat-card,
+  .catalog-block,
+  .record-card {
+    background: rgba(255, 255, 255, 0.58);
+    -webkit-backdrop-filter: blur(14px) saturate(1.25);
+    backdrop-filter: blur(14px) saturate(1.25);
+  }
+
+  .sheet,
+  .guide-box,
+  .modal {
+    background: rgba(255, 255, 255, 0.72);
+    -webkit-backdrop-filter: blur(18px) saturate(1.25);
+    backdrop-filter: blur(18px) saturate(1.25);
+  }
+
+  .suggest {
+    background: rgba(255, 255, 255, 0.9);
+    -webkit-backdrop-filter: blur(12px) saturate(1.2);
+    backdrop-filter: blur(12px) saturate(1.2);
+  }
+
+  #form-actions {
+    background: rgba(255, 255, 255, 0.8);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+    backdrop-filter: blur(14px) saturate(1.2);
+  }
 }

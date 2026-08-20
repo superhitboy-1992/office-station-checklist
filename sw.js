@@ -3,7 +3,7 @@
    策略：导航请求网络优先（离线回退缓存页面），静态资源缓存优先 + 后台更新。 */
 'use strict';
 
-var CACHE_NAME = 'zzjc-cache-v6';
+var CACHE_NAME = 'zzjc-cache-v9';
 var APP_SHELL = [
   './',
   './index.html',
@@ -20,7 +20,13 @@ var APP_SHELL = [
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
-  './icons/apple-touch-icon.png'
+  './icons/apple-touch-icon.png',
+  './assets/mascot-main.png',
+  './assets/mascot-main-256.png',
+  './assets/mascot-secondary.webp',
+  './assets/splash-firefly.webp',
+  './assets/bg-desktop.webp',
+  './assets/bg-mobile.webp'
 ];
 
 self.addEventListener('install', function (event) {

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="description" content="公交驻站检查现场登记与表格导出">
-  <meta name="theme-color" content="#1f6f8b">
+  <meta name="theme-color" content="#3f7d6f">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -16,10 +16,23 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <div class="splash" id="splash" aria-hidden="true">
+    <img class="splash-img" src="assets/splash-firefly.webp" alt="">
+    <div class="splash-content">
+      <div class="splash-title">驻站检查登记系统</div>
+      <div class="splash-sub">登记驻站检查记录 · 自动生成《驻站记录表》</div>
+    </div>
+  </div>
+
   <header class="app-header">
     <div class="header-inner">
-      <h1>驻站检查登记系统</h1>
-      <p class="subtitle">登记驻站检查记录 · 自动生成《驻站记录表》</p>
+      <div class="header-brand">
+        <img class="header-mascot" src="assets/mascot-main-256.png" alt="" width="44" height="44">
+        <div>
+          <h1>驻站检查登记系统</h1>
+          <p class="subtitle">登记驻站检查记录 · 自动生成《驻站记录表》</p>
+        </div>
+      </div>
     </div>
     <nav class="tabs" id="tabs">
       <button type="button" class="tab-btn active" data-tab="reg">登记记录</button>
@@ -268,7 +281,9 @@
           </table>
         </div>
         <div class="record-cards" id="record-cards"></div>
-        <p class="empty-tip" id="list-empty" hidden>没有符合条件的记录</p>
+        <div class="empty-state" id="list-empty" hidden>
+          <p class="empty-tip">没有符合条件的记录</p>
+        </div>
       </div>
     </section>
 
@@ -307,7 +322,9 @@
           </table>
         </div>
         <div class="record-cards" id="group-cards"></div>
-        <p class="empty-tip" id="group-empty" hidden>当前条件下没有记录</p>
+        <div class="empty-state" id="group-empty" hidden>
+          <p class="empty-tip">当前条件下没有记录</p>
+        </div>
         <div class="note-box">
           说明：按「日期 + 站点」分组，每组自动生成一张《驻站记录表》（固定 30 行、A4 打印格式），
           与现成模板一致。手机上可直接分享表格到微信/邮件；批量导出会把多张表打包成一个 ZIP 文件。
@@ -415,5 +432,19 @@
   <script src="js/template-data.js"></script>
   <script src="js/xlsx-writer.js"></script>
   <script src="js/app.js"></script>
+  <script>
+    (function () {
+      var splash = document.getElementById('splash');
+      var shownAt = Date.now();
+      function hideSplash() {
+        if (splash) splash.classList.add('hide');
+      }
+      window.addEventListener('load', function () {
+        var wait = Math.max(0, 3000 - (Date.now() - shownAt));
+        setTimeout(hideSplash, wait);
+      });
+      setTimeout(hideSplash, 3200);
+    })();
+  </script>
 </body>
 </html>
