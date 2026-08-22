@@ -1187,6 +1187,13 @@ button {
     padding: 14px;
   }
 
+  /* 登记卡片关闭毛玻璃：backdrop-filter 会让内部 fixed 保存栏锚定到卡片底部，
+     导致“保存记录”栏遮挡表单末尾的“备注”字段；桌面端不受影响 */
+  #tab-reg .card {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
   .form-grid {
     grid-template-columns: 1fr;
     gap: 12px;
