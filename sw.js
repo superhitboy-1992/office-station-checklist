@@ -3,7 +3,7 @@
    策略：导航请求网络优先（离线回退缓存页面），静态资源缓存优先 + 后台更新。 */
 'use strict';
 
-var CACHE_NAME = 'zzjc-cache-v9';
+var CACHE_NAME = 'zzjc-cache-v12';
 var APP_SHELL = [
   './',
   './index.html',

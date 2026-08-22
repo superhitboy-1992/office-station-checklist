@@ -36,6 +36,25 @@
     return String(s === null || s === undefined ? '' : s).trim();
   }
 
+  // 车号统一格式：全角转半角、去空格/横线/点等分隔符、字母大写
+  function normalizePlate(s) {
+    var v = String(s === null || s === undefined ? '' : s);
+    v = v
+      .replace(/\u3000/g, ' ')
+      .replace(/[\uFF01-\uFF5E]/g, function (ch) {
+        return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0);
+      })
+      .replace(/[\s\-－—–·．.]+/g, '')
+      .toUpperCase();
+    return v;
+  }
+
+  // 转数字：空值/非法值统一按 0 处理（上客人数全面统一为 0）
+  function toNum(v) {
+    var n = Number(v);
+    return isNaN(n) ? 0 : n;
+  }
+
   // 文件名安全化（去掉 Windows 不允许的字符）
   function safeName(s) {
     return normalize(s).replace(/[\\/:*?"<>|]/g, '_');
@@ -75,7 +94,7 @@
         route: normalize(r.route),
         plate: normalize(r.plate),
         time: normalize(r.time),
-        boarding: (r.boarding === '' || r.boarding === null || r.boarding === undefined) ? '' : Number(r.boarding),
+        boarding: toNum(r.boarding),
         stationNorms: normalize(r.stationNorms),
         conductorCall: normalize(r.conductorCall),
         checkResult: normalize(r.checkResult),
@@ -98,6 +117,8 @@
     dateLabel: dateLabel,
     dateDot: dateDot,
     normalize: normalize,
+    normalizePlate: normalizePlate,
+    toNum: toNum,
     safeName: safeName,
     groupRecords: groupRecords,
     toRecordRows: toRecordRows,

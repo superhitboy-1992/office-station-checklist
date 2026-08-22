@@ -11,8 +11,9 @@
   var LS_GUIDE = 'zzjc_guide_v1';
   var LS_INSTALL = 'zzjc_install_v1';
   var LS_CATALOG_SEEDED = 'zzjc_catalog_seeded_v1';
+  var LS_FLEETS_SEEDED = 'zzjc_fleets_seeded_v1';
 
-  var DEFAULT_SETTINGS = { stations: [], checkers: [], routes: [], plates: [] };
+  var DEFAULT_SETTINGS = { stations: [], checkers: [], routes: [], plates: [], fleets: [] };
 
   var RESULT_PRESETS = ['正常', '未按规定进出站', '未打招呼', '其他问题'];
   var PICK_NAMES = { station: '站点', checker: '驻站人', route: '线路', plate: '车号' };
@@ -28,7 +29,8 @@
     last: { station: '', checker: '', date: '' },
     reminder: { lastBackupAt: 0, lastBackupCount: 0 },
     deferredPrompt: null,
-    activePick: null
+    activePick: null,
+    pickerFleet: null
   };
 
   // ---------- 工具 ----------
@@ -53,6 +55,20 @@
   function isStandalone() {
     return window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator.standalone === true);
+  }
+
+  // 车队数据规范化：保留合法条目、去重、去首尾空格
+  function normalizeFleets(input) {
+    var seen = {};
+    var out = [];
+    (Array.isArray(input) ? input : []).forEach(function (f) {
+      if (!f || typeof f !== 'object') return;
+      var name = Core.normalize(f.name);
+      if (!name || seen[name]) return;
+      seen[name] = 1;
+      out.push({ name: name, routes: unique(f.routes || []) });
+    });
+    return out;
   }
 
   // ---------- 本地存储 ----------
@@ -172,9 +188,37 @@
   // ---------- 快捷选择弹层（站点/驻站人/线路/车号） ----------
   function pickSettingsKey(key) { return key + 's'; }
 
+  // ---------- 线路车队归属 ----------
+  function fleetOfRoute(route) {
+    var fleets = state.settings.fleets || [];
+    for (var i = 0; i < fleets.length; i++) {
+      if (fleets[i].routes.indexOf(route) >= 0) return fleets[i].name;
+    }
+    return '';
+  }
+
+  function routesInFleet(name) {
+    var fleets = state.settings.fleets || [];
+    for (var i = 0; i < fleets.length; i++) {
+      if (fleets[i].name === name) return fleets[i].routes.slice();
+    }
+    return [];
+  }
+
+  function unassignedRoutes() {
+    var assigned = {};
+    (state.settings.fleets || []).forEach(function (f) {
+      f.routes.forEach(function (r) { assigned[r] = 1; });
+    });
+    return (state.settings.routes || []).filter(function (r) { return !assigned[r]; });
+  }
+
   function openPicker(key) {
     state.activePick = key;
+    state.pickerFleet = null;
     $('picker-title').textContent = '选择' + PICK_NAMES[key];
+    $('picker-back').hidden = true;
+    $('picker-search').placeholder = '输入或搜索…';
     $('picker-search').value = $('f-' + key).value || '';
     renderPickerList();
     Search.ensurePinyin(function () {
@@ -187,31 +231,113 @@
   function closePicker() {
     $('picker-overlay').hidden = true;
     state.activePick = null;
+    state.pickerFleet = null;
+    $('picker-back').hidden = true;
+    $('picker-search').placeholder = '输入或搜索…';
+  }
+
+  function addPickerItem(box, text, onClick, cls) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'picker-item' + (cls ? ' ' + cls : '');
+    b.textContent = text;
+    b.addEventListener('click', onClick);
+    box.appendChild(b);
+  }
+
+  function pickerEmptyTip(box) {
+    var tip = document.createElement('div');
+    tip.className = 'picker-empty';
+    tip.textContent = '没有匹配项，可直接在上方输入后点「使用输入内容」';
+    box.appendChild(tip);
+  }
+
+  // 线路选择层：搜索时始终匹配全部线路；未输入时按 车队列表 → 车队线路 两级展示
+  function renderRoutePicker(q, box) {
+    var routes = state.settings.routes || [];
+    if (Core.normalize(q)) {
+      var out = Search.search(routes, q, 50).map(function (m) { return m.value; });
+      if (!out.length) { pickerEmptyTip(box); return; }
+      out.forEach(function (v) {
+        addPickerItem(box, v, function () { applyPick(v); });
+      });
+      return;
+    }
+    var view = state.pickerFleet;
+    if (!view) {
+      addPickerItem(box, '全部线路（' + routes.length + '）', function () {
+        state.pickerFleet = '__all__';
+        updateRoutePickerHead();
+        renderPickerList();
+      }, 'fleet-item');
+      (state.settings.fleets || []).forEach(function (f) {
+        addPickerItem(box, f.name + '（' + f.routes.length + '）', function () {
+          state.pickerFleet = f.name;
+          updateRoutePickerHead();
+          renderPickerList();
+        }, 'fleet-item');
+      });
+      var unassigned = unassignedRoutes();
+      if (unassigned.length) {
+        addPickerItem(box, '未分类（' + unassigned.length + '）', function () {
+          state.pickerFleet = '__unassigned__';
+          updateRoutePickerHead();
+          renderPickerList();
+        }, 'fleet-item');
+      }
+      if (!box.children.length) pickerEmptyTip(box);
+      return;
+    }
+    var list;
+    if (view === '__all__') list = routes.slice();
+    else if (view === '__unassigned__') list = unassignedRoutes();
+    else list = routesInFleet(view);
+    if (!list.length) { pickerEmptyTip(box); return; }
+    list.forEach(function (v) {
+      addPickerItem(box, v, function () { applyPick(v); });
+    });
+  }
+
+  function updateRoutePickerHead() {
+    if (state.activePick !== 'route') return;
+    var view = state.pickerFleet;
+    var back = $('picker-back');
+    var title = $('picker-title');
+    var search = $('picker-search');
+    if (view === '__all__') {
+      title.textContent = '全部线路';
+      back.hidden = false;
+      search.placeholder = '搜索全部线路…';
+    } else if (view === '__unassigned__') {
+      title.textContent = '未分类';
+      back.hidden = false;
+      search.placeholder = '搜索全部线路…';
+    } else if (view) {
+      title.textContent = view;
+      back.hidden = false;
+      search.placeholder = '搜索全部线路…';
+    } else {
+      title.textContent = '选择线路';
+      back.hidden = true;
+      search.placeholder = '输入或搜索…';
+    }
   }
 
   function renderPickerList() {
     if (!state.activePick) return;
+    var box = $('picker-list');
+    box.innerHTML = '';
+    if (state.activePick === 'route') {
+      renderRoutePicker($('picker-search').value, box);
+      return;
+    }
     var arr = state.settings[pickSettingsKey(state.activePick)] || [];
     var out = Search.search(arr, $('picker-search').value, 50).map(function (m) {
       return m.value;
     });
-
-    var box = $('picker-list');
-    box.innerHTML = '';
-    if (!out.length) {
-      var tip = document.createElement('div');
-      tip.className = 'picker-empty';
-      tip.textContent = '没有匹配项，可直接在上方输入后点「使用输入内容」';
-      box.appendChild(tip);
-      return;
-    }
+    if (!out.length) { pickerEmptyTip(box); return; }
     out.forEach(function (v) {
-      var b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'picker-item';
-      b.textContent = v;
-      b.addEventListener('click', function () { applyPick(v); });
-      box.appendChild(b);
+      addPickerItem(box, v, function () { applyPick(v); });
     });
   }
 
@@ -254,6 +380,7 @@
           b.textContent = m.value;
           b.addEventListener('click', function () {
             el.value = m.value;
+            if (sp.input === 'f-plate') maybeAutoFillTime();
             box.hidden = true;
             el.focus();
           });
@@ -269,7 +396,10 @@
         if (isMobile() && el.id.indexOf('f-') === 0) return;
         show();
       });
-      el.addEventListener('input', show);
+      el.addEventListener('input', function () {
+        if (sp.input === 'f-plate') maybeAutoFillTime();
+        show();
+      });
       el.addEventListener('blur', hideSoon);
       el.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') box.hidden = true;
@@ -281,6 +411,7 @@
     var key = state.activePick;
     if (key) {
       $('f-' + key).value = v;
+      if (key === 'plate') maybeAutoFillTime();
     }
     closePicker();
   }
@@ -313,14 +444,29 @@
       if (key) $('f-' + key).value = '';
       closePicker();
     });
+    $('picker-back').addEventListener('click', function () {
+      state.pickerFleet = null;
+      updateRoutePickerHead();
+      renderPickerList();
+    });
     $('picker-close').addEventListener('click', closePicker);
     $('picker-overlay').addEventListener('click', function (e) {
       if (e.target === $('picker-overlay')) closePicker();
+    });
+
+    // 车号失焦时自动统一格式（空格/横线等去掉、字母大写）
+    $('f-plate').addEventListener('blur', function () {
+      var v = Core.normalizePlate($('f-plate').value);
+      if (v !== $('f-plate').value) {
+        $('f-plate').value = v;
+        maybeAutoFillTime();
+      }
     });
   }
 
   // ---------- 资料库（站点/驻站人/线路） ----------
   var _catalogPyEnsured = false;
+  var _activeCat = 'stations';
 
   function catEl(k, suffix) {
     return $('cat-' + k + '-' + suffix);
@@ -336,43 +482,233 @@
     if (!_catalogPyEnsured) {
       _catalogPyEnsured = true;
       Search.ensurePinyin(renderCatalog);
+      return;
     }
     ['stations', 'checkers', 'routes'].forEach(function (k) {
-      var arr = state.settings[k] || [];
-      catEl(k, 'count').textContent = arr.length + ' 条';
-      var q = catEl(k, 'search').value || '';
-      var box = catEl(k, 'list');
-      box.innerHTML = '';
-      if (!arr.length) {
-        var empty = document.createElement('div');
-        empty.className = 'catalog-empty';
-        empty.textContent = '暂无数据，可点「导入 Excel」或手动添加';
-        box.appendChild(empty);
+      catEl(k, 'count').textContent = (state.settings[k] || []).length + ' 条';
+    });
+    renderCatalogPanel(_activeCat);
+  }
+
+  function closeAllMoreMenus() {
+    var open = document.querySelectorAll('.more-wrap.open');
+    open.forEach(function (wrap) {
+      wrap.classList.remove('open');
+      var menu = wrap.querySelector('.more-menu');
+      if (menu) menu.hidden = true;
+      var btn = wrap.querySelector('[data-act="more"]');
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  function toggleMoreMenu(btn) {
+    var wrap = btn.closest('.more-wrap');
+    if (!wrap) return;
+    var wasOpen = wrap.classList.contains('open');
+    closeAllMoreMenus();
+    if (!wasOpen) {
+      wrap.classList.add('open');
+      var menu = wrap.querySelector('.more-menu');
+      if (menu) menu.hidden = false;
+      btn.setAttribute('aria-expanded', 'true');
+    }
+  }
+
+  function switchCatalogTab(k) {
+    if (_activeCat === k) return;
+    _activeCat = k;
+    var tabs = $('catalog-tabs');
+    if (tabs) {
+      tabs.querySelectorAll('.catalog-tab').forEach(function (t) {
+        var on = t.dataset.cat === k;
+        t.classList.toggle('active', on);
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+    }
+    ['stations', 'checkers', 'routes'].forEach(function (cat) {
+      var p = $('catalog-panel-' + cat);
+      if (p) p.classList.toggle('active', cat === k);
+    });
+    closeAllMoreMenus();
+    renderCatalogPanel(k);
+  }
+
+  // 把名称按搜索归一化规则逐字映射回原文位置，用于命中高亮
+  function keyIndexMap(s) {
+    var map = [];
+    var key = '';
+    var si = 0;
+    var str = String(s === null || s === undefined ? '' : s);
+    while (si < str.length) {
+      var ch = str.charAt(si);
+      if (/\s/.test(ch)) { si++; continue; }
+      key += ch.replace('（', '(').replace('）', ')').toLowerCase();
+      map.push(si);
+      si++;
+    }
+    return { key: key, map: map };
+  }
+
+  // 命中处用 <mark> 包裹（仅汉字/字符子串命中；纯拼音命中不额外高亮）
+  function appendCatalogName(container, name, q) {
+    var qKey = Search.keyOf(q || '');
+    if (qKey) {
+      var info = keyIndexMap(name);
+      var idx = info.key.indexOf(qKey);
+      if (idx >= 0) {
+        var start = info.map[idx];
+        var end = info.map[idx + qKey.length - 1] + 1;
+        if (start > 0) container.appendChild(document.createTextNode(name.slice(0, start)));
+        var mark = document.createElement('mark');
+        mark.className = 'catalog-hit';
+        mark.textContent = name.slice(start, end);
+        container.appendChild(mark);
+        if (end < name.length) container.appendChild(document.createTextNode(name.slice(end)));
         return;
       }
-      var matches = Search.search(arr, q, 200);
-      matches.forEach(function (m) {
-        var row = document.createElement('div');
-        row.className = 'catalog-item';
-        var name = document.createElement('span');
-        name.textContent = m.value;
-        var del = document.createElement('button');
-        del.type = 'button';
-        del.className = 'del';
-        del.dataset.cat = k;
-        del.dataset.value = m.value;
-        del.textContent = '删除';
-        row.appendChild(name);
-        row.appendChild(del);
-        box.appendChild(row);
+    }
+    container.appendChild(document.createTextNode(name));
+  }
+
+  function appendCatalogRow(box, k, value, q) {
+    var row = document.createElement('div');
+    row.className = 'catalog-item';
+    var name = document.createElement('span');
+    name.className = 'cat-name';
+    appendCatalogName(name, value, q);
+    row.appendChild(name);
+    if (k === 'routes') {
+      var sel = document.createElement('select');
+      sel.className = 'fleet-select';
+      sel.setAttribute('aria-label', value + ' 所属车队');
+      var optEmpty = document.createElement('option');
+      optEmpty.value = '';
+      optEmpty.textContent = '未分类';
+      sel.appendChild(optEmpty);
+      (state.settings.fleets || []).forEach(function (f) {
+        var o = document.createElement('option');
+        o.value = f.name;
+        o.textContent = f.name;
+        sel.appendChild(o);
       });
-      if (arr.length > 200) {
-        var more = document.createElement('div');
-        more.className = 'catalog-more';
-        more.textContent = '共 ' + arr.length + ' 条，仅显示前 200 条，输入关键字可缩小范围';
-        box.appendChild(more);
+      sel.value = fleetOfRoute(value);
+      sel.addEventListener('change', function () { setRouteFleet(value, sel.value); });
+      row.appendChild(sel);
+    }
+    var del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'del';
+    del.dataset.cat = k;
+    del.dataset.value = value;
+    del.textContent = '删除';
+    row.appendChild(del);
+    box.appendChild(row);
+  }
+
+  function appendCatalogEmpty(box, k, message, withActions) {
+    var empty = document.createElement('div');
+    empty.className = 'catalog-empty';
+    var p = document.createElement('p');
+    p.className = 'catalog-empty-text';
+    p.textContent = message;
+    empty.appendChild(p);
+    if (withActions) {
+      var actions = document.createElement('div');
+      actions.className = 'catalog-empty-actions';
+      var imp = document.createElement('button');
+      imp.type = 'button';
+      imp.className = 'btn mini';
+      imp.dataset.act = 'import';
+      imp.dataset.cat = k;
+      imp.textContent = '导入 Excel';
+      var add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'btn mini primary';
+      add.dataset.act = 'focus-add';
+      add.dataset.cat = k;
+      add.textContent = '手动添加';
+      actions.appendChild(imp);
+      actions.appendChild(add);
+      empty.appendChild(actions);
+    }
+    box.appendChild(empty);
+  }
+
+  function stationGroupOf(name) {
+    var info = Search.pinyinInfo(name);
+    if (!info || !info.initial) return '#';
+    var ch = info.initial.charAt(0).toUpperCase();
+    if (/[A-Z]/.test(ch)) return ch;
+    return '#';
+  }
+
+  function scrollCatalogToGroup(k, letter) {
+    var box = catEl(k, 'list');
+    var el = document.getElementById('cat-' + k + '-group-' + letter);
+    if (box && el) box.scrollTop = el.offsetTop - box.clientTop;
+  }
+
+  function renderCatalogPanel(k) {
+    var arr = state.settings[k] || [];
+    var q = catEl(k, 'search').value || '';
+    var box = catEl(k, 'list');
+    var meta = catEl(k, 'meta');
+    box.innerHTML = '';
+    if (meta) meta.textContent = '';
+    var indexBox = k === 'stations' ? catEl(k, 'index') : null;
+    if (indexBox) {
+      indexBox.innerHTML = '';
+      indexBox.hidden = true;
+    }
+    if (!arr.length) {
+      appendCatalogEmpty(box, k, '暂无数据，可导入 Excel 或手动添加', true);
+      return;
+    }
+    var matches = Search.search(arr, q, 0);
+    if (!matches.length) {
+      appendCatalogEmpty(box, k, '没有符合「' + q + '」的' + catalogLabel(k));
+      if (meta) meta.textContent = '共 0 条匹配';
+      return;
+    }
+    if (!q && k === 'stations') {
+      var groups = {};
+      matches.forEach(function (m) {
+        var g = stationGroupOf(m.value);
+        if (!groups[g]) groups[g] = [];
+        groups[g].push(m.value);
+      });
+      var letters = Object.keys(groups).sort(function (a, b) {
+        if (a === '#') return 1;
+        if (b === '#') return -1;
+        return a < b ? -1 : a > b ? 1 : 0;
+      });
+      letters.forEach(function (letter) {
+        var group = document.createElement('div');
+        group.className = 'catalog-group';
+        group.id = 'cat-' + k + '-group-' + letter;
+        var head = document.createElement('div');
+        head.className = 'catalog-group-head';
+        head.textContent = letter + ' · ' + groups[letter].length + ' 条';
+        group.appendChild(head);
+        groups[letter].forEach(function (value) { appendCatalogRow(group, k, value, ''); });
+        box.appendChild(group);
+      });
+      if (indexBox) {
+        letters.forEach(function (letter) {
+          var b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'catalog-index-btn';
+          b.textContent = letter;
+          b.setAttribute('aria-label', '滚动到' + letter + '组');
+          b.addEventListener('click', function () { scrollCatalogToGroup(k, letter); });
+          indexBox.appendChild(b);
+        });
+        indexBox.hidden = false;
       }
-    });
+    } else {
+      matches.forEach(function (m) { appendCatalogRow(box, k, m.value, q); });
+    }
+    if (meta) meta.textContent = q ? '共 ' + matches.length + ' 条匹配' : '共 ' + arr.length + ' 条';
   }
 
   function addCatalogItem(k) {
@@ -397,10 +733,117 @@
   function deleteCatalogItem(k, v) {
     askConfirm('确定从资料库删除「' + v + '」吗？已保存的记录不受影响。', function () {
       state.settings[k] = state.settings[k].filter(function (x) { return x !== v; });
+      if (k === 'routes') {
+        (state.settings.fleets || []).forEach(function (f) {
+          f.routes = f.routes.filter(function (r) { return r !== v; });
+        });
+      }
       persist();
       renderCatalog();
       toast('已删除');
     });
+  }
+
+  // ---------- 车队维护 ----------
+  function setRouteFleet(route, fleetName) {
+    var oldName = fleetOfRoute(route);
+    if (oldName === fleetName) return;
+    if (oldName) {
+      var old = (state.settings.fleets || []).find(function (f) { return f.name === oldName; });
+      if (old) old.routes = old.routes.filter(function (r) { return r !== route; });
+    }
+    if (fleetName) {
+      var f = (state.settings.fleets || []).find(function (x) { return x.name === fleetName; });
+      if (f && f.routes.indexOf(route) < 0) f.routes.push(route);
+    }
+    persist();
+    renderCatalog();
+    toast(fleetName ? '已归入' + fleetName : '已改为未分类');
+  }
+
+  function renderFleetPanel() {
+    var box = $('cat-routes-fleet-list');
+    box.innerHTML = '';
+    (state.settings.fleets || []).forEach(function (f) {
+      var row = document.createElement('div');
+      row.className = 'fleet-item-row';
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.value = f.name;
+      input.className = 'fleet-name-input';
+      input.setAttribute('aria-label', '车队名称');
+      input.addEventListener('change', function () { renameFleet(f.name, input.value); });
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+      });
+      var count = document.createElement('span');
+      count.className = 'fleet-count';
+      count.textContent = f.routes.length + ' 条';
+      var del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'del';
+      del.textContent = '删除';
+      del.addEventListener('click', function () { deleteFleet(f.name); });
+      row.appendChild(input);
+      row.appendChild(count);
+      row.appendChild(del);
+      box.appendChild(row);
+    });
+    if (!(state.settings.fleets || []).length) {
+      var empty = document.createElement('div');
+      empty.className = 'catalog-empty';
+      empty.textContent = '暂无车队，可先添加车队，再到上方线路列表里分配归属';
+      box.appendChild(empty);
+    }
+  }
+
+  function renameFleet(oldName, newName) {
+    var v = Core.normalize(newName);
+    if (!v || v === oldName) {
+      renderFleetPanel();
+      return;
+    }
+    var fleets = state.settings.fleets;
+    if (fleets.some(function (f) { return f.name === v; })) {
+      toast('车队「' + v + '」已存在', true);
+      renderFleetPanel();
+      return;
+    }
+    var f = fleets.find(function (x) { return x.name === oldName; });
+    if (f) f.name = v;
+    persist();
+    renderCatalog();
+    renderFleetPanel();
+    toast('已重命名');
+  }
+
+  function deleteFleet(name) {
+    askConfirm('确定删除车队「' + name + '」吗？该车队线路将回到「未分类」，线路本身不会删除。', function () {
+      state.settings.fleets = (state.settings.fleets || []).filter(function (f) { return f.name !== name; });
+      persist();
+      renderCatalog();
+      renderFleetPanel();
+      toast('已删除车队');
+    });
+  }
+
+  function addFleet() {
+    var v = Core.normalize($('cat-routes-fleet-add').value);
+    if (!v) {
+      toast('请输入车队名称', true);
+      return;
+    }
+    var fleets = state.settings.fleets;
+    if (fleets.some(function (f) { return f.name === v; })) {
+      toast('车队「' + v + '」已存在', true);
+      return;
+    }
+    fleets.push({ name: v, routes: [] });
+    $('cat-routes-fleet-add').value = '';
+    persist();
+    renderCatalog();
+    renderFleetPanel();
+    toast('已添加车队');
   }
 
   function clearCatalog(k) {
@@ -408,6 +851,9 @@
     askConfirm('确定清空全部' + label + '吗？此操作不可恢复，已保存的记录不受影响。', function () {
       askConfirm('再次确认：真的要清空全部' + label + '吗？', function () {
         state.settings[k] = [];
+        if (k === 'routes') {
+          (state.settings.fleets || []).forEach(function (f) { f.routes = []; });
+        }
         persist();
         renderCatalog();
         toast('已清空' + label);
@@ -457,13 +903,14 @@
 
   function initCatalog() {
     var panel = $('tab-catalog');
+    var tabs = $('catalog-tabs');
+    if (tabs) {
+      tabs.addEventListener('click', function (e) {
+        var tab = e.target.closest('.catalog-tab');
+        if (tab && tab.dataset.cat) switchCatalogTab(tab.dataset.cat);
+      });
+    }
     ['stations', 'checkers', 'routes'].forEach(function (k) {
-      panel.querySelector('[data-act="add"][data-cat="' + k + '"]')
-        .addEventListener('click', function () { addCatalogItem(k); });
-      panel.querySelector('[data-act="import"][data-cat="' + k + '"]')
-        .addEventListener('click', function () { catEl(k, 'file').click(); });
-      panel.querySelector('[data-act="clear"][data-cat="' + k + '"]')
-        .addEventListener('click', function () { clearCatalog(k); });
       catEl(k, 'add').addEventListener('keydown', function (e) {
         if (e.key === 'Enter') { e.preventDefault(); addCatalogItem(k); }
       });
@@ -473,10 +920,38 @@
         this.value = '';
       });
     });
+    $('cat-routes-fleet-add-btn').addEventListener('click', addFleet);
+    $('cat-routes-fleet-add').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); addFleet(); }
+    });
     panel.addEventListener('click', function (e) {
       var del = e.target.closest('.catalog-item .del');
-      if (del) deleteCatalogItem(del.dataset.cat, del.dataset.value);
+      if (del && del.dataset.cat) {
+        deleteCatalogItem(del.dataset.cat, del.dataset.value);
+        return;
+      }
+      var actEl = e.target.closest('[data-act]');
+      if (!actEl || !actEl.dataset.cat) return;
+      var k = actEl.dataset.cat;
+      var act = actEl.dataset.act;
+      if (act === 'add') addCatalogItem(k);
+      else if (act === 'import') catEl(k, 'file').click();
+      else if (act === 'clear') { closeAllMoreMenus(); clearCatalog(k); }
+      else if (act === 'fleets') toggleFleetPanel();
+      else if (act === 'focus-add') catEl(k, 'add').focus();
+      else if (act === 'more') toggleMoreMenu(actEl);
     });
+    document.addEventListener('click', function (e) {
+      var wrap = e.target.closest ? e.target.closest('.more-wrap') : null;
+      if (wrap && wrap.classList.contains('open')) return;
+      closeAllMoreMenus();
+    });
+  }
+
+  function toggleFleetPanel() {
+    var p = $('cat-routes-fleet-panel');
+    p.hidden = !p.hidden;
+    if (!p.hidden) renderFleetPanel();
   }
 
   // ---------- Enter 顺序跳转（车号 / 备注回车即保存） ----------
@@ -504,10 +979,10 @@
 
   // ---------- 登记表单 ----------
   function resetForm() {
-    $('f-time').value = Core.nowTime();
+    $('f-time').value = '';
     $('f-route').value = '';
     $('f-plate').value = '';
-    $('f-boarding').value = '';
+    $('f-boarding').value = '0';
     $('f-result').value = '';
     $('f-rectify').value = '';
     $('f-remark').value = '';
@@ -516,11 +991,20 @@
     syncResultChips('');
   }
 
+  // 车号录入后自动登记过站时间（仅当时间框为空时）
+  function maybeAutoFillTime() {
+    var t = $('f-time');
+    if (!t.value && Core.normalize($('f-plate').value)) {
+      t.value = Core.nowTime();
+    }
+  }
+
   // ---------- 开始新检查：清空本次检查固定信息 ----------
   function clearFixedInfo() {
     $('f-station').value = '';
     $('f-checker').value = '';
     $('f-date').value = Core.todayStr();
+    $('f-time').value = '';
     state.last = { station: '', checker: '', date: '' };
     saveJSON(LS_LAST, state.last);
     toast('已开始新检查，请填写站点、驻站人、日期');
@@ -533,7 +1017,8 @@
     $('f-time').value = rec.time || Core.nowTime();
     $('f-route').value = rec.route || '';
     $('f-plate').value = rec.plate || '';
-    $('f-boarding').value = rec.boarding === null || rec.boarding === undefined ? '' : rec.boarding;
+    var boarding = rec.boarding;
+    $('f-boarding').value = (boarding === '' || boarding === null || boarding === undefined) ? '0' : boarding;
     $('f-result').value = rec.checkResult || '';
     $('f-rectify').value = rec.rectification || '';
     $('f-remark').value = rec.remark || '';
@@ -549,8 +1034,8 @@
       date: $('f-date').value,
       time: Core.normalize($('f-time').value),
       route: Core.normalize($('f-route').value),
-      plate: Core.normalize($('f-plate').value),
-      boarding: $('f-boarding').value === '' ? '' : $('f-boarding').value,
+      plate: Core.normalizePlate($('f-plate').value),
+      boarding: $('f-boarding').value === '' ? '0' : $('f-boarding').value,
       stationNorms: state.tick.norm,
       conductorCall: state.tick.call,
       checkResult: Core.normalize($('f-result').value),
@@ -612,7 +1097,7 @@
   function learnValues(rec) {
     ['station', 'checker', 'route', 'plate'].forEach(function (k) {
       var arr = state.settings[k + 's'];
-      arr.unshift(rec[k]);
+      arr.unshift(k === 'plate' ? Core.normalizePlate(rec[k]) : rec[k]);
       state.settings[k + 's'] = unique(arr).slice(0, k === 'plate' ? 300 : 5000);
     });
   }
@@ -645,7 +1130,9 @@
       if (route && r.route !== route) return false;
       if (kw) {
         var hay = [r.plate, r.checkResult, r.remark, r.rectification, r.station, r.route, r.checker].join(' ');
-        if (hay.indexOf(kw) < 0) return false;
+        var kwNorm = Core.normalizePlate(kw);
+        var plateNorm = Core.normalizePlate(r.plate);
+        if (hay.indexOf(kw) < 0 && (kwNorm ? plateNorm.indexOf(kwNorm) < 0 : true)) return false;
       }
       return true;
     }).sort(function (a, b) {
@@ -677,7 +1164,7 @@
         '<td>' + escapeHtml(r.station) + '</td>' +
         '<td>' + escapeHtml(r.route) + '</td>' +
         '<td>' + escapeHtml(r.plate) + '</td>' +
-        '<td>' + (r.boarding === '' || r.boarding === null ? '' : r.boarding) + '</td>' +
+        '<td>' + (r.boarding === '' || r.boarding === null || r.boarding === undefined ? '0' : r.boarding) + '</td>' +
         '<td>' + badge(r.stationNorms) + '</td>' +
         '<td>' + badge(r.conductorCall) + '</td>' +
         '<td class="text-left">' + escapeHtml(r.checkResult) + '</td>' +
@@ -713,7 +1200,7 @@
         var card = document.createElement('div');
         card.className = 'record-card';
         var boarding = (r.boarding === '' || r.boarding === null || r.boarding === undefined)
-          ? '—' : escapeHtml(String(r.boarding));
+          ? '0' : escapeHtml(String(r.boarding));
         card.innerHTML =
           '<button type="button" class="card-main" data-id="' + r.id + '">' +
             '<span class="card-time">' + escapeHtml(r.time || '--:--') + '</span>' +
@@ -929,7 +1416,9 @@
   }
 
   function saveSettings() {
-    state.settings.plates = unique($('set-plates').value.split('\n'));
+    state.settings.plates = unique($('set-plates').value.split('\n').map(function (s) {
+      return Core.normalizePlate(s);
+    }));
     persist();
     toast('选项已保存');
   }
@@ -966,6 +1455,7 @@
         ['stations', 'checkers', 'routes', 'plates'].forEach(function (k) {
           state.settings[k] = unique(state.settings[k] || []);
         });
+        state.settings.fleets = normalizeFleets(state.settings.fleets);
         persist();
         renderStats();
         renderList();
@@ -1018,6 +1508,44 @@
     });
     try {
       localStorage.setItem(LS_CATALOG_SEEDED, '1');
+    } catch (e) { /* 存储不可用时忽略 */ }
+    persist();
+  }
+
+  // 车队与线路名升级：老设备首次打开时补充新线路、替换旧名称、写入车队分组
+  function seedFleets() {
+    try {
+      if (localStorage.getItem(LS_FLEETS_SEEDED) === '1') return;
+    } catch (e) {
+      return;
+    }
+    var seed = window.CatalogSeed;
+    if (!seed || !Array.isArray(seed.fleets)) return;
+    var RENAMES = { 'DZ乐张线': '乐张专线', '廊下3路A': '廊下3路', '廊下3路B': '廊下3路' };
+    state.settings.routes = unique(state.settings.routes.map(function (r) {
+      return RENAMES[r] || r;
+    }));
+    (seed.routes || []).forEach(function (r) {
+      if (state.settings.routes.indexOf(r) < 0) state.settings.routes.push(r);
+    });
+    (state.settings.fleets || []).forEach(function (f) {
+      f.routes = f.routes.filter(function (r) {
+        return state.settings.routes.indexOf(r) >= 0 && !RENAMES[r];
+      });
+    });
+    seed.fleets.forEach(function (sf) {
+      var f = state.settings.fleets.find(function (x) { return x.name === sf.name; });
+      if (!f) {
+        f = { name: sf.name, routes: [] };
+        state.settings.fleets.push(f);
+      }
+      sf.routes.forEach(function (r) {
+        if (state.settings.routes.indexOf(r) < 0) state.settings.routes.push(r);
+        if (f.routes.indexOf(r) < 0) f.routes.push(r);
+      });
+    });
+    try {
+      localStorage.setItem(LS_FLEETS_SEEDED, '1');
     } catch (e) { /* 存储不可用时忽略 */ }
     persist();
   }
@@ -1110,13 +1638,15 @@
     ['stations', 'checkers', 'routes', 'plates'].forEach(function (k) {
       state.settings[k] = unique(state.settings[k] || []);
     });
+    state.settings.fleets = normalizeFleets(state.settings.fleets);
     seedCatalog();
+    seedFleets();
 
     var today = Core.todayStr();
     $('f-date').value = today;
     $('f-station').value = state.last.station || '';
     $('f-checker').value = state.last.checker || '';
-    $('f-time').value = Core.nowTime();
+    $('f-time').value = '';
 
     document.querySelectorAll('.tab-btn').forEach(function (b) {
       b.addEventListener('click', function () { switchTab(b.dataset.tab); });
@@ -1129,6 +1659,10 @@
     initInlineSuggest();
     initCatalog();
     initEnterNav();
+
+    $('time-now').addEventListener('click', function () {
+      $('f-time').value = Core.nowTime();
+    });
 
     $('record-form').addEventListener('submit', saveRecord);
     $('btn-cancel-edit').addEventListener('click', cancelEdit);

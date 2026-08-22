@@ -107,7 +107,10 @@
             <div class="form-grid">
               <div class="field">
                 <label for="f-time">过站时间 <em>*</em></label>
-                <input type="time" id="f-time">
+                <div class="pick-wrap">
+                  <input type="time" id="f-time">
+                  <button type="button" class="pick-btn now" id="time-now" aria-label="登记当前时间">现在</button>
+                </div>
               </div>
               <div class="field">
                 <label for="f-route">线路 <em>*</em></label>
@@ -119,7 +122,7 @@
               <div class="field">
                 <label for="f-plate">车号 <em>*</em></label>
                 <div class="pick-wrap">
-                  <input type="text" id="f-plate" placeholder="如：沪A-68392D" autocomplete="off" autocapitalize="off" spellcheck="false">
+                  <input type="text" id="f-plate" placeholder="如：沪A36401D" autocomplete="off" autocapitalize="off" spellcheck="false">
                   <button type="button" class="pick-btn" data-pick="plate" aria-label="选择车号">▾</button>
                 </div>
               </div>
@@ -127,7 +130,7 @@
                 <label for="f-boarding">上客人数</label>
                 <div class="stepper">
                   <button type="button" class="step-btn" id="board-minus" aria-label="减少人数">−</button>
-                  <input type="number" id="f-boarding" min="0" step="1" inputmode="numeric" placeholder="0">
+                  <input type="number" id="f-boarding" min="0" step="1" inputmode="numeric" placeholder="0" value="0">
                   <button type="button" class="step-btn" id="board-plus" aria-label="增加人数">+</button>
                 </div>
               </div>
@@ -173,65 +176,106 @@
       <div class="card">
         <div class="card-head">
           <h2>资料库</h2>
-          <span class="desc">站点、驻站人、线路的完整名单，登记时自动参与模糊匹配（支持拼音）。</span>
+          <span class="desc">站点、驻站人、线路的完整名单，登记时自动参与模糊匹配（支持拼音）；线路可归入车队，登记时先选车队再选线路。</span>
         </div>
-        <div class="catalog-grid">
-          <div class="catalog-block" data-cat="stations">
-            <div class="catalog-head">
-              <h3>站点 <span class="catalog-count" id="cat-stations-count">0 条</span></h3>
-              <div class="catalog-actions">
-                <button type="button" class="btn mini" data-act="import" data-cat="stations">导入 Excel</button>
-                <button type="button" class="btn mini danger" data-act="clear" data-cat="stations">清空本类</button>
-              </div>
-            </div>
-            <div class="catalog-tools">
-              <input type="search" id="cat-stations-search" placeholder="搜索站点（支持拼音）…" autocomplete="off" autocapitalize="off">
+        <div class="catalog-tabs" id="catalog-tabs" role="tablist" aria-label="资料库分类">
+          <button type="button" class="catalog-tab active" data-cat="stations" role="tab" aria-selected="true">站点 <span class="catalog-count" id="cat-stations-count">0 条</span></button>
+          <button type="button" class="catalog-tab" data-cat="checkers" role="tab" aria-selected="false">驻站人 <span class="catalog-count" id="cat-checkers-count">0 条</span></button>
+          <button type="button" class="catalog-tab" data-cat="routes" role="tab" aria-selected="false">线路 <span class="catalog-count" id="cat-routes-count">0 条</span></button>
+        </div>
+
+        <div class="catalog-panel active" id="catalog-panel-stations" data-cat="stations" role="tabpanel">
+          <div class="catalog-toolbar">
+            <input type="search" id="cat-stations-search" placeholder="搜索站点（支持拼音）…" autocomplete="off" autocapitalize="off">
+            <div class="catalog-toolbar-row">
               <div class="catalog-add">
                 <input type="text" id="cat-stations-add" placeholder="手动添加站点名" autocomplete="off" autocapitalize="off">
                 <button type="button" class="btn primary mini" data-act="add" data-cat="stations">添加</button>
               </div>
-            </div>
-            <div class="catalog-list" id="cat-stations-list"></div>
-            <input type="file" id="cat-stations-file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
-          </div>
-
-          <div class="catalog-block" data-cat="checkers">
-            <div class="catalog-head">
-              <h3>驻站人 <span class="catalog-count" id="cat-checkers-count">0 条</span></h3>
               <div class="catalog-actions">
-                <button type="button" class="btn mini" data-act="import" data-cat="checkers">导入 Excel</button>
-                <button type="button" class="btn mini danger" data-act="clear" data-cat="checkers">清空本类</button>
+                <button type="button" class="btn mini" data-act="import" data-cat="stations">导入 Excel</button>
+                <div class="more-wrap">
+                  <button type="button" class="btn mini ghost" data-act="more" data-cat="stations" aria-label="更多操作" aria-expanded="false">⋯</button>
+                  <div class="more-menu" hidden>
+                    <button type="button" class="more-item danger" data-act="clear" data-cat="stations">清空本类</button>
+                  </div>
+                </div>
               </div>
             </div>
-            <div class="catalog-tools">
-              <input type="search" id="cat-checkers-search" placeholder="搜索驻站人（支持拼音）…" autocomplete="off" autocapitalize="off">
+          </div>
+          <div class="catalog-body">
+            <div class="catalog-list-wrap">
+              <div class="catalog-list" id="cat-stations-list"></div>
+            </div>
+            <div class="catalog-index" id="cat-stations-index" hidden></div>
+          </div>
+          <div class="catalog-footer" id="cat-stations-meta"></div>
+          <input type="file" id="cat-stations-file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+        </div>
+
+        <div class="catalog-panel" id="catalog-panel-checkers" data-cat="checkers" role="tabpanel">
+          <div class="catalog-toolbar">
+            <input type="search" id="cat-checkers-search" placeholder="搜索驻站人（支持拼音）…" autocomplete="off" autocapitalize="off">
+            <div class="catalog-toolbar-row">
               <div class="catalog-add">
                 <input type="text" id="cat-checkers-add" placeholder="手动添加姓名" autocomplete="off" autocapitalize="off">
                 <button type="button" class="btn primary mini" data-act="add" data-cat="checkers">添加</button>
               </div>
-            </div>
-            <div class="catalog-list" id="cat-checkers-list"></div>
-            <input type="file" id="cat-checkers-file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
-          </div>
-
-          <div class="catalog-block" data-cat="routes">
-            <div class="catalog-head">
-              <h3>线路 <span class="catalog-count" id="cat-routes-count">0 条</span></h3>
               <div class="catalog-actions">
-                <button type="button" class="btn mini" data-act="import" data-cat="routes">导入 Excel</button>
-                <button type="button" class="btn mini danger" data-act="clear" data-cat="routes">清空本类</button>
+                <button type="button" class="btn mini" data-act="import" data-cat="checkers">导入 Excel</button>
+                <div class="more-wrap">
+                  <button type="button" class="btn mini ghost" data-act="more" data-cat="checkers" aria-label="更多操作" aria-expanded="false">⋯</button>
+                  <div class="more-menu" hidden>
+                    <button type="button" class="more-item danger" data-act="clear" data-cat="checkers">清空本类</button>
+                  </div>
+                </div>
               </div>
             </div>
-            <div class="catalog-tools">
-              <input type="search" id="cat-routes-search" placeholder="搜索线路（支持拼音）…" autocomplete="off" autocapitalize="off">
+          </div>
+          <div class="catalog-body">
+            <div class="catalog-list-wrap">
+              <div class="catalog-list" id="cat-checkers-list"></div>
+            </div>
+          </div>
+          <div class="catalog-footer" id="cat-checkers-meta"></div>
+          <input type="file" id="cat-checkers-file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+        </div>
+
+        <div class="catalog-panel" id="catalog-panel-routes" data-cat="routes" role="tabpanel">
+          <div class="catalog-toolbar">
+            <input type="search" id="cat-routes-search" placeholder="搜索线路（支持拼音）…" autocomplete="off" autocapitalize="off">
+            <div class="catalog-toolbar-row">
               <div class="catalog-add">
                 <input type="text" id="cat-routes-add" placeholder="手动添加线路名" autocomplete="off" autocapitalize="off">
                 <button type="button" class="btn primary mini" data-act="add" data-cat="routes">添加</button>
               </div>
+              <div class="catalog-actions">
+                <button type="button" class="btn mini" data-act="import" data-cat="routes">导入 Excel</button>
+                <button type="button" class="btn mini" data-act="fleets" data-cat="routes">管理车队</button>
+                <div class="more-wrap">
+                  <button type="button" class="btn mini ghost" data-act="more" data-cat="routes" aria-label="更多操作" aria-expanded="false">⋯</button>
+                  <div class="more-menu" hidden>
+                    <button type="button" class="more-item danger" data-act="clear" data-cat="routes">清空本类</button>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="catalog-list" id="cat-routes-list"></div>
-            <input type="file" id="cat-routes-file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
           </div>
+          <div class="fleet-panel" id="cat-routes-fleet-panel" hidden>
+            <div class="fleet-panel-head">车队管理：可重命名、删除车队；删除车队时线路回到「未分类」，线路本身不会删除。</div>
+            <div class="fleet-list" id="cat-routes-fleet-list"></div>
+            <div class="catalog-add">
+              <input type="text" id="cat-routes-fleet-add" placeholder="新增车队名称" autocomplete="off" autocapitalize="off">
+              <button type="button" class="btn primary mini" id="cat-routes-fleet-add-btn">添加车队</button>
+            </div>
+          </div>
+          <div class="catalog-body">
+            <div class="catalog-list-wrap">
+              <div class="catalog-list" id="cat-routes-list"></div>
+            </div>
+          </div>
+          <div class="catalog-footer" id="cat-routes-meta"></div>
+          <input type="file" id="cat-routes-file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
         </div>
       </div>
     </section>
@@ -369,6 +413,8 @@
         <ul class="help-list">
           <li>手机使用：先用浏览器打开本系统，选择「添加到主屏幕」后即可像 App 一样全屏、离线使用。</li>
           <li>登记：填好站点、驻站人、线路、车号等后点「保存记录」，即可继续登记下一辆。</li>
+          <li>线路：登记时先选车队再选线路，也可直接搜索或手动输入；车队归属可在「资料库 → 管理车队」调整。</li>
+          <li>车号：输入后会自动统一格式（去掉空格、横线，字母大写），无需手动修改。</li>
           <li>资料库：站点、驻站人、线路在「资料库」页维护，支持 Excel 一键导入和手动增删改；录入时支持汉字或拼音模糊匹配。</li>
           <li>导出：在「导出表格」选择日期范围，按「日期+站点」分组，每组生成一张《驻站记录表》。</li>
           <li>生成的文件与《驻站记录表.xlsx》格式一致：30 行、A4 纵向打印、可合并到月度汇总。</li>
@@ -383,6 +429,7 @@
   <div class="sheet-overlay" id="picker-overlay" hidden>
     <div class="sheet" id="picker-panel">
       <div class="sheet-head">
+        <button type="button" class="sheet-back" id="picker-back" aria-label="返回车队列表" hidden>‹</button>
         <h3 id="picker-title">选择站点</h3>
         <button type="button" class="sheet-close" id="picker-close" aria-label="关闭">✕</button>
       </div>
